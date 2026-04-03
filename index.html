@@ -11,10 +11,39 @@
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
+  <button class="menu-toggle" id="menuToggle" aria-label="Abrir menu" aria-expanded="false">
+    <span></span>
+    <span></span>
+    <span></span>
+  </button>
+
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <img src="logo.png" alt="Logo" class="sidebar-logo" />
+      <h2>Assembleia de Deus</h2>
+      <button class="sidebar-close" id="sidebarClose" aria-label="Fechar menu">✕</button>
+    </div>
+
+    <nav class="sidebar-nav">
+      <a href="#sobre" class="sidebar-link" data-icon="ℹ️">Sobre</a>
+      <a href="#cultos" class="sidebar-link" data-icon="🙏">Cultos</a>
+      <a href="#departamentos" class="sidebar-link" data-icon="👥">Departamentos</a>
+      <a href="#galeria" class="sidebar-link" data-icon="🖼️">Galeria</a>
+      <a href="#eventos" class="sidebar-link" data-icon="📅">Eventos</a>
+      <a href="#contato" class="sidebar-link" data-icon="📧">Contato</a>
+    </nav>
+
+    <div class="sidebar-footer">
+      <a href="#" id="loginTriggerMobile" class="sidebar-link-secondary">🔐 Login</a>
+    </div>
+  </aside>
+
+  <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
   <header class="site-header">
     <div class="header-inner">
       <div class="brand">
-        <div class="brand-logo" aria-hidden="true"></div>
+        <img src="logo.png" alt="Logo da Assembleia de Deus" class="brand-logo" />
         <div>
           <h1>Igreja Evangélica Assembleia de Deus</h1>
           <p class="subtitle">Jardim Ponta Grossa - Apucarana / PR</p>
@@ -29,6 +58,7 @@
         <a href="#contato">Contato</a>
         <a href="#" id="loginTrigger" class="login-link">Login</a>
       </nav>
+      <button class="theme-toggle" id="themeToggle" aria-label="Ativar modo escuro">🌙 Modo Escuro</button>
       <div class="user-status" id="userStatus" aria-live="polite"></div>
     </div>
   </header>
@@ -480,7 +510,11 @@ function getQueryParam(name) {
           const response = await fetch(`${API_BASE}/api/profile`, {
             credentials: 'include',
           });
-          if (!response.ok) return;
+          
+          // 401 é esperado quando usuário não está autenticado
+          if (response.status === 401 || !response.ok) {
+            return;
+          }
 
           const profile = await response.json();
           const userStatus = document.getElementById('userStatus');
@@ -499,8 +533,9 @@ function getQueryParam(name) {
           });
 
           userStatus.appendChild(logoutLink);
-        } catch {
-          // sem perfil
+        } catch (error) {
+          // Erro de rede ou parse - silencioso
+          console.debug('Erro ao carregar perfil:', error);
         }
       }
 
@@ -510,6 +545,97 @@ function getQueryParam(name) {
       if (loginStatus === 'success' && prefillProvider) {
         showLoginSuccess(prefillProvider);
         window.history.replaceState(null, '', window.location.pathname);
+      }
+
+      function setTheme(theme) {
+        const body = document.body;
+        if (theme === 'dark') {
+          body.classList.add('dark-mode');
+          body.classList.add('manual-theme');
+          themeToggle.textContent = '☀️ Modo Claro';
+          themeToggle.setAttribute('aria-label', 'Ativar modo claro');
+        } else {
+          body.classList.remove('dark-mode');
+          body.classList.add('manual-theme');
+          themeToggle.textContent = '🌙 Modo Escuro';
+          themeToggle.setAttribute('aria-label', 'Ativar modo escuro');
+        }
+        localStorage.setItem('site-theme', theme);
+      }
+
+      const themeToggle = document.getElementById('themeToggle');
+      themeToggle.addEventListener('click', () => {
+        const active = document.body.classList.contains('dark-mode');
+        setTheme(active ? 'light' : 'dark');
+      });
+
+      const savedTheme = localStorage.getItem('site-theme');
+      if (savedTheme) {
+        setTheme(savedTheme);
+      }
+
+      // Menu Toggle
+      const menuToggle = document.getElementById('menuToggle');
+      const sidebar = document.getElementById('sidebar');
+      const sidebarOverlay = document.getElementById('sidebarOverlay');
+      const sidebarClose = document.getElementById('sidebarClose');
+      const sidebarLinks = document.querySelectorAll('.sidebar-link');
+
+      function openMenu() {
+        menuToggle.classList.add('active');
+        sidebar.classList.add('active');
+        sidebarOverlay.classList.add('active');
+      }
+
+      function closeMenu() {
+        menuToggle.classList.remove('active');
+        sidebar.classList.remove('active');
+        sidebarOverlay.classList.remove('active');
+      }
+
+      function toggleMenu() {
+        const isActive = sidebar.classList.contains('active');
+        if (isActive) {
+          closeMenu();
+        } else {
+          openMenu();
+        }
+      }
+
+      // Event Listeners
+      if (menuToggle) {
+        menuToggle.addEventListener('click', function(e) {
+          e.stopPropagation();
+          toggleMenu();
+        });
+      }
+
+      if (sidebarClose) {
+        sidebarClose.addEventListener('click', function(e) {
+          e.stopPropagation();
+          closeMenu();
+        });
+      }
+
+      if (sidebarOverlay) {
+        sidebarOverlay.addEventListener('click', closeMenu);
+      }
+
+      if (sidebarLinks && sidebarLinks.length > 0) {
+        sidebarLinks.forEach((link) => {
+          link.addEventListener('click', closeMenu);
+        });
+      }
+
+      const loginTriggerMobile = document.getElementById('loginTriggerMobile');
+      if (loginTriggerMobile) {
+        loginTriggerMobile.addEventListener('click', (event) => {
+          event.preventDefault();
+          closeMenu();
+          if (loginTrigger) {
+            loginTrigger.click();
+          }
+        });
       }
 
       refreshProfile();
