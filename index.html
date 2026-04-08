@@ -63,7 +63,7 @@
     </div>
   </header>
 
-  <main>
+  <main class="main-layout">
     <section class="hero" id="sobre">
       <div class="hero-content">
         <h2>Deus. Jesus Cristo. Confiança.</h2>
@@ -111,10 +111,10 @@
           <p>📞 <a href="tel:+554332212345">(43) 3221-2345</a> (exemplo)</p>
         </div>
 
-        <div class="theology-invite">
+        <aside class="theology-invite" aria-label="Convite teológico">
           <h3>Aula de Teologia</h3>
           <p>Participe das aulas de teologia pelo <strong>CETADEB</strong> e aprofunde seus conhecimentos bíblicos com formação sólida.</p>
-        </div>
+        </aside>
       </div>
     </section>
 
@@ -158,14 +158,14 @@
           </article>
         </div>
 
-        <div class="department-history">
+        <section class="department-history" aria-label="Histórias dos departamentos">
           <h3>Histórias dos Departamentos</h3>
           <p>Desde nossa fundação, Deus tem levantado líderes e voluntários dedicados que fazem dos departamentos instrumentos para o crescimento espiritual da igreja.</p>
           <ul>
             <li><strong>Louvor</strong>: nasceu como um pequeno grupo de irmãos que se reunia para ensaiar e hoje lidera cultos semanais.</li>
             <li><strong>Escola Bíblica</strong>: começou com apenas uma sala e hoje atende crianças, jovens e adultos com ensino sólido e amoroso.</li>
           </ul>
-        </div>
+        </section>
       </div>
     </section>
 
@@ -332,20 +332,12 @@
 
         <div class="divider">ou</div>
 
-        <div class="field-group">
-          <label for="email">E-mail</label>
-          <input id="email" type="email" placeholder="seu@email.com" autocomplete="email" required />
-        </div>
-        <div class="field-group">
-          <label for="password">Senha</label>
-          <input id="password" type="password" placeholder="Senha" autocomplete="current-password" required />
-        </div>
         <div class="modal-actions">
-            <button class="btn btn-secondary" type="button" id="cancelLogin">Cancelar</button>
-            <button class="btn btn-primary" type="button" id="submitLogin">Avançar</button>
-          </div>
-          <p class="modal-note">O código será enviado por e-mail. Se estiver testando localmente sem servidor, confira as instruções na pasta <code>/server</code>.</p>
+          <button class="btn btn-secondary" type="button" id="cancelLogin">Cancelar</button>
+          <button class="btn btn-primary" type="button" id="submitLogin">Avançar</button>
         </div>
+        <p class="modal-note">O código será enviado por e-mail. Se estiver testando localmente sem servidor, confira as instruções na pasta <code>/server</code>.</p>
+      </div>
 
         <div id="step2" class="hidden">
           <p>Digite o código de verificação enviado para o seu e-mail.</p>
@@ -547,32 +539,69 @@ function getQueryParam(name) {
         window.history.replaceState(null, '', window.location.pathname);
       }
 
-      function setTheme(theme) {
+      const themeToggle = document.getElementById('themeToggle');
+      const systemThemeQuery = window.matchMedia('(prefers-color-scheme: dark)');
+
+      function applyTheme(theme, isManual = false) {
         const body = document.body;
-        if (theme === 'dark') {
-          body.classList.add('dark-mode');
-          body.classList.add('manual-theme');
+        const darkMode = theme === 'dark';
+
+        body.classList.toggle('dark-mode', darkMode);
+        body.classList.toggle('manual-theme', isManual);
+
+        if (darkMode) {
           themeToggle.textContent = '☀️ Modo Claro';
           themeToggle.setAttribute('aria-label', 'Ativar modo claro');
         } else {
-          body.classList.remove('dark-mode');
-          body.classList.add('manual-theme');
           themeToggle.textContent = '🌙 Modo Escuro';
           themeToggle.setAttribute('aria-label', 'Ativar modo escuro');
         }
-        localStorage.setItem('site-theme', theme);
+
+        if (isManual) {
+          localStorage.setItem('site-theme', theme);
+        } else {
+          localStorage.removeItem('site-theme');
+        }
       }
 
-      const themeToggle = document.getElementById('themeToggle');
+      function getPreferredTheme() {
+        if (systemThemeQuery.matches) {
+          return 'dark';
+        }
+        return 'light';
+      }
+
+      function setTheme(theme, manuallySet = false) {
+        if (theme !== 'dark' && theme !== 'light') {
+          console.warn('Tema desconhecido:', theme);
+          theme = 'light';
+        }
+
+        applyTheme(theme, manuallySet);
+      }
+
+      function initializeTheme() {
+        const savedTheme = localStorage.getItem('site-theme');
+
+        if (savedTheme === 'dark' || savedTheme === 'light') {
+          setTheme(savedTheme, true);
+        } else {
+          setTheme(getPreferredTheme(), false);
+        }
+
+        systemThemeQuery.addEventListener?.('change', (event) => {
+          if (!document.body.classList.contains('manual-theme')) {
+            setTheme(event.matches ? 'dark' : 'light', false);
+          }
+        });
+      }
+
       themeToggle.addEventListener('click', () => {
         const active = document.body.classList.contains('dark-mode');
-        setTheme(active ? 'light' : 'dark');
+        setTheme(active ? 'light' : 'dark', true);
       });
 
-      const savedTheme = localStorage.getItem('site-theme');
-      if (savedTheme) {
-        setTheme(savedTheme);
-      }
+      initializeTheme();
 
       // Menu Toggle
       const menuToggle = document.getElementById('menuToggle');
@@ -585,12 +614,16 @@ function getQueryParam(name) {
         menuToggle.classList.add('active');
         sidebar.classList.add('active');
         sidebarOverlay.classList.add('active');
+        menuToggle.setAttribute('aria-expanded', 'true');
+        sidebar.setAttribute('aria-hidden', 'false');
       }
 
       function closeMenu() {
         menuToggle.classList.remove('active');
         sidebar.classList.remove('active');
         sidebarOverlay.classList.remove('active');
+        menuToggle.setAttribute('aria-expanded', 'false');
+        sidebar.setAttribute('aria-hidden', 'true');
       }
 
       function toggleMenu() {
@@ -626,6 +659,12 @@ function getQueryParam(name) {
           link.addEventListener('click', closeMenu);
         });
       }
+
+      document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') {
+          closeMenu();
+        }
+      });
 
       const loginTriggerMobile = document.getElementById('loginTriggerMobile');
       if (loginTriggerMobile) {
